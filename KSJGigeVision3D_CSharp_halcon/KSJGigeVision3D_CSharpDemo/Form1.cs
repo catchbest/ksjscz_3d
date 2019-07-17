@@ -10,7 +10,10 @@ using System.Windows.Forms;
 using KSJGigeVisionApi_Space;
 using System.Threading;
 using System.IO;
+using System.Collections;
+using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
+using HalconDotNet;
 
 namespace KSJGigeVision3D_CSharpDemo
 {
@@ -69,6 +72,9 @@ namespace KSJGigeVision3D_CSharpDemo
             CSnumericUpDown.Value = nColSize;
             RSnumericUpDown.Value = nRowSize;
             TYPEnumericUpDown.Value = nType;
+            YnumericUpDown.Value = 0.04m;
+            MaxnumericUpDown.Value = 10m;
+            HighnumericUpDown.Value = 10m;
         }
 
         private void comboBox_DEVICE_LIST_SelectedIndexChanged(object sender, EventArgs e)
@@ -147,9 +153,9 @@ namespace KSJGigeVision3D_CSharpDemo
 
             //// 算法到此结束，返回结果  
             return bmp;
-        }  
+        }
 
-        private void GvspThread()
+        private unsafe void GvspThread()
         {
             int nRet = 0;
             uint uiGvspport = 0xcbbb;
@@ -180,13 +186,48 @@ namespace KSJGigeVision3D_CSharpDemo
             profile = new float[nColSize * nRowSize];
             profilex = new float[nColSize * nRowSize];
             Graphics g;
-            int i = 0;
+            int i = 0,j;
             Point p1 = new Point(0, 0);
             Point p2 = new Point(0, 0);
             int Index = 0;
             byte[] idata = new byte[nColSize * nRowSize];
             Bitmap bitmap;
-           
+
+            float fy = (float)(Math.Round(YnumericUpDown.Value * 100)) / 100;
+            float[] hPx = new float[nColSize * nHeight];
+            float[] hPy = new float[nColSize * nHeight];
+            float[] hPz = new float[nColSize * nHeight];
+            HObject Hobjx = null, Hobjy = null, Hobjz = null;
+            HTuple ObjectModel3DID = null;
+            IntPtr ptrdata = Marshal.AllocHGlobal(nWidth * nHeight * 4);
+
+            HTuple camParam = 0;
+            //CamParam := [0.01,0,7e-6,7e-6,352,288,710,576]
+            camParam[0] = 0.01;
+            camParam[1] = 0;
+            camParam[2] = 7e-6;
+            camParam[3] = 7e-6;
+            camParam[4] = 352;
+            camParam[5] = 288;
+            camParam[6] = 710;
+            camParam[7] = 576;
+
+            HTuple Pose = 0;
+            HOperatorSet.CreatePose(-14.1079, -27.3273, 207.606, 175.064, 1.5805, 269.28, "Rp+T", "gba", "point", out Pose);
+
+            HTuple GenParamName = 0;
+            //GenParamName := ['color','disp_pose','alpha','intensity']
+            GenParamName[0] = "color";
+            GenParamName[1] = "disp_pose";
+            GenParamName[2] = "alpha";
+            GenParamName[3] = "intensity";
+            HTuple GenParamValue = 0;
+            //GenParamValue := ['green','false',0.8,'none']
+            GenParamValue[0] = "green";
+            GenParamValue[1] = "false";
+            GenParamValue[2] = 0.8;
+            GenParamValue[3] = "none";
+
             while (true)
             {
                 if (exitEvent.WaitOne(0))
@@ -234,7 +275,7 @@ namespace KSJGigeVision3D_CSharpDemo
                         Index = 0;
                         for (i = 0; i < nHeight; ++i)
                         {
-                            for (int j = 0; j < nWidth; ++j)
+                            for (j = 0; j < nWidth; ++j)
                             {
                                 if (profile[Index] <= fZmapHigh && profile[Index] >= fZmapLow)
                                 {
@@ -251,7 +292,47 @@ namespace KSJGigeVision3D_CSharpDemo
 
                         bitmap = ToGrayBitmap(idata, nWidth, nHeight);
                         this.PictureBox_PREVIEWWND.Image = bitmap;
+ 
+                        for (i = 0; i < nHeight; ++i)
+                        {
+                            for (j = 0; j < nWidth; ++j)
+                            {
+                                if (profilex[i * nWidth + j] == -1000)
+                                {
+                                    profilex[i * nWidth + j] = 0.04f * j;
+                                    profile[i * nWidth + j] = 0;
+                                }
+                                hPx[i * nWidth + j] = profilex[i * nWidth + j];
+                                hPz[i * nWidth + j] = profile[i * nWidth + j];
+                                hPy[i * nWidth + j] = fy * i;
+                            }
+                        }
 
+                        bool bCheck1 = checksavefile.Checked;
+                        if (bCheck1)
+                        { 
+                            int len = nHeight*nWidth;
+                            WriteFile("X", hPx, len);
+                            WriteFile("Y", hPy, len);
+                            WriteFile("Z", hPz, len);
+                            checksavefile.Checked = false;
+                        }
+                        Marshal.Copy(hPx, 0, ptrdata, nWidth * nHeight);
+                        HOperatorSet.GenImage1(out Hobjx, "real", nWidth, nHeight, ptrdata);
+                        Marshal.Copy(hPy, 0, ptrdata, nWidth * nHeight);
+                        HOperatorSet.GenImage1(out Hobjy, "real", nWidth, nHeight, ptrdata);
+                        Marshal.Copy(hPz, 0, ptrdata, nWidth * nHeight);
+                        HOperatorSet.GenImage1(out Hobjz, "real", nWidth, nHeight, ptrdata);
+                        
+                        HOperatorSet.XyzToObjectModel3d(Hobjx, Hobjy, Hobjz, out ObjectModel3DID);
+                        HOperatorSet.PrepareObjectModel3d(ObjectModel3DID, "segmentation", "true", "distance_to", "auto");
+
+                        //HOperatorSet.DispObjectModel3d(this.hWindowControl1.HalconWindow, ObjectModel3DID, camParam, Pose, GenParamName, GenParamValue);
+                        Hobjx.Dispose();
+                        Hobjy.Dispose();
+                        Hobjz.Dispose();
+                        HOperatorSet.ClearObjectModel3d(ObjectModel3DID);
+ 
                         bool bCheck = SavecheckBox.Checked;
                         if (bCheck)
                         {
@@ -294,12 +375,12 @@ namespace KSJGigeVision3D_CSharpDemo
                             {
                                 if (i != nCount - 1)
                                 {
-                                    if (profilex[i] == -1000) temp = "nan nan nan\n";
+                                    if (profilex[i] == -1000) temp = "nan\n";
                                     else temp = string.Format("{0:N5} {1:N5} {2:N5}\n", profilex[i], fProfiley * (i / 1280), profile[i]);
                                 }
                                 else
                                 {
-                                    if (profilex[i] == -1000) temp = "nan nan nan";
+                                    if (profilex[i] == -1000) temp = "nan";
                                     else temp = string.Format("{0:N5} {1:N5} {2:N5}", profilex[i], fProfiley * (i / 1280), profile[i]);  
                                 }
 
@@ -313,6 +394,15 @@ namespace KSJGigeVision3D_CSharpDemo
                     }
                 }
             }
+        }
+
+        private void WriteFile(string file, float[] byteForFloat, int len)
+        {
+            BinaryWriter bw;
+            bw = new BinaryWriter(new FileStream(file,FileMode.Create));
+            for (int i = 0; i < len; i++) bw.Write(byteForFloat[i]);
+
+            bw.Close();
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)

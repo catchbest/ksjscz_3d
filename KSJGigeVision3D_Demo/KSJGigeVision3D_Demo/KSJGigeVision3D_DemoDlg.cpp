@@ -311,7 +311,7 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 
 					for (i = 0; i < nCount; i++)
 					{
-						if (profilex[i] == -1000) strcpy(szMsg, "nan");
+						if (profilex[i] == -1000) strcpy(szMsg, "nan nan nan");
 						else sprintf_s(szMsg, "%.5f %.5f %.5f", profilex[i], fProfiley * (i / 1280), profile[i]);
 						pcdfile.write(szMsg, strlen(szMsg));
 						if (i != nCount - 1) pcdfile.write("\n", 1);

@@ -1,0 +1,9 @@
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\bin\Release\KSJGigeVision3D_CSharpDemo.exe.config
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\bin\Release\KSJGigeVision3D_CSharpDemo.exe
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\bin\Release\KSJGigeVision3D_CSharpDemo.pdb
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.csprojResolveAssemblyReference.cache
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.Form1.resources
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.Properties.Resources.resources
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.csproj.GenerateResource.Cache
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.exe
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Release\KSJGigeVision3D_CSharpDemo.pdb
