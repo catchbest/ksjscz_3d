@@ -38,3 +38,6 @@ D:\工作区\3d智能相机halcon\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSh
 D:\工作区\3d智能相机halcon\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\bin\Debug\halcondotnet.dll
 D:\工作区\3d智能相机halcon\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\bin\Debug\halcondotnet.xml
 D:\工作区\3d智能相机halcon\KSJGigeVision3D_CSharpDemo\KSJGigeVision3D_CSharpDemo\obj\Debug\KSJGigeVision3D_CSharpDemo.csprojResolveAssemblyReference.cache
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharp_halcon\KSJGigeVision3D_CSharpDemo\bin\Debug\KSJGigeVision3D_CSharpDemo.exe.config
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharp_halcon\KSJGigeVision3D_CSharpDemo\obj\Debug\KSJGigeVision3D_CSharpDemo.exe
+D:\GITHUB\github.ksjscz_3d\KSJGigeVision3D_CSharp_halcon\KSJGigeVision3D_CSharpDemo\obj\Debug\KSJGigeVision3D_CSharpDemo.pdb

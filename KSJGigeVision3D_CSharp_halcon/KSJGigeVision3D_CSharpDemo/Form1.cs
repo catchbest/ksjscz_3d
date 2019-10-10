@@ -375,12 +375,12 @@ namespace KSJGigeVision3D_CSharpDemo
                             {
                                 if (i != nCount - 1)
                                 {
-                                    if (profilex[i] == -1000) temp = "nan\n";
+                                    if (profilex[i] == -1000) temp = "nan nan nan\n";
                                     else temp = string.Format("{0:N5} {1:N5} {2:N5}\n", profilex[i], fProfiley * (i / 1280), profile[i]);
                                 }
                                 else
                                 {
-                                    if (profilex[i] == -1000) temp = "nan";
+                                    if (profilex[i] == -1000) temp = "nan nan nan";
                                     else temp = string.Format("{0:N5} {1:N5} {2:N5}", profilex[i], fProfiley * (i / 1280), profile[i]);  
                                 }
 
