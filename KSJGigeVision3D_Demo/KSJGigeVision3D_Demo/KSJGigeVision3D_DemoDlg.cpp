@@ -23,19 +23,22 @@ CKSJGigeVision3D_DemoDlg::CKSJGigeVision3D_DemoDlg(CWnd* pParent /*=NULL*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	KSJGIGE_Init();//初始化相机
 
-	m_hGvspExitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	m_hGvspExitEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
 	m_nDeviceCurSel = -1;
 }
 
 CKSJGigeVision3D_DemoDlg::~CKSJGigeVision3D_DemoDlg()
 {
 	KSJGIGE_UnInit();//释放相机资源
+	m_pWndImage->DestroyWindow();
+	delete m_pWndImage;
+	m_pWndImage = NULL;
 }
 
 void CKSJGigeVision3D_DemoDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_STATIC_PREVIEWWND, m_SnapStatic);
+	//DDX_Control(pDX, IDC_STATIC_PREVIEWWND, m_SnapStatic);
 }
 
 BEGIN_MESSAGE_MAP(CKSJGigeVision3D_DemoDlg, CDialogEx)
@@ -43,6 +46,7 @@ BEGIN_MESSAGE_MAP(CKSJGigeVision3D_DemoDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_CBN_SELCHANGE(IDC_COMBO_DEVICE_LIST, &CKSJGigeVision3D_DemoDlg::OnCbnSelchangeComboDeviceList)
 	ON_BN_CLICKED(IDC_CHECK_PREVIEWSTART, &CKSJGigeVision3D_DemoDlg::OnBnClickedCheckPreviewstart)
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -74,7 +78,23 @@ BOOL CKSJGigeVision3D_DemoDlg::OnInitDialog()
 		pComboBox->AddString(szDev);
 	}
 
+	CRect         m_rcSrcImageWnd;
+	m_rcSrcImageWnd.left = 220;
+	m_rcSrcImageWnd.top = 80;
+	m_rcSrcImageWnd.right = 920;
+	m_rcSrcImageWnd.bottom = 420;
+	m_pWndImage = new CKSJImageWnd(this, -1);
+	m_pWndImage->Create(NULL, TEXT(""), WS_CHILD | WS_BORDER | WS_HSCROLL | WS_VSCROLL | WS_VISIBLE, m_rcSrcImageWnd, this, 0, NULL);   // 
+	m_pWndImage->ShowWindow(SW_SHOW);
+	m_pWndImage->SetFocus();
+	m_pWndImage->SetSelected(TRUE);
 	GetDlgItem(IDC_STATIC_PREVIEWWND)->MoveWindow(20, 80, 1280, 256);
+	if (nCameraCount >= 1)
+	{
+		m_nDeviceCurSel = 0;
+		pComboBox->SetCurSel(m_nDeviceCurSel);
+		OnCbnSelchangeComboDeviceList();
+	}
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -136,6 +156,9 @@ void CKSJGigeVision3D_DemoDlg::UpdateInterface()
 	KSJGIGE_GetType(m_nDeviceCurSel, &nType);
 	SetDlgItemInt(IDC_EDIT_COL_SIZE, nColSize);
 	SetDlgItemInt(IDC_EDIT_ROW_SIZE, nRowSize);
+	GetDlgItem(IDC_EDIT_Y)->SetWindowText("0.1");
+	SetDlgItemInt(IDC_EDIT_LOW, 0);
+	SetDlgItemInt(IDC_EDIT_HIGH, 20);
 	GetDlgItem(IDC_EDIT_ROW_TYPE)->SetWindowText(strType[nType]);
 }
 
@@ -154,6 +177,27 @@ void CKSJGigeVision3D_DemoDlg::OnBnClickedCheckPreviewstart()
 		{
 			SetEvent(m_hGvspExitEvent);
 		}
+
+	
+		while (TRUE)
+		{
+			DWORD result;
+			MSG msg;
+
+			result = MsgWaitForMultipleObjects(1, &m_hGvspThread,
+				FALSE, INFINITE, QS_ALLINPUT);
+
+			if (result == (WAIT_OBJECT_0))
+			{
+				break;
+			}
+			else
+			{
+				PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+				DispatchMessage(&msg);
+			}
+		}
+
 	}
 }
 
@@ -185,7 +229,7 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 	KSJGIGE_GetType(m_nDeviceCurSel, &nType);//获取相机采集类型
 	int nCount = 0;
 	int nMod = 0;
-	int i = 0;
+	int i = 0, j = 0;
 	imagedata = new char[nColSize * nRowSize * 8];//为采集数据分配空间
 	KSJGIGE_StartGvsp(m_nDeviceCurSel, true);//发送采集命令
 	int nWidth = nColSize;
@@ -193,6 +237,8 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 	Mat  ImageOutput;
 	float *profile;
 	float *profilex;
+	float *profiley = NULL;
+	profiley = new float[nColSize * nRowSize];
 	char szText[16] = { 0 };
 	char szMsg[64] = { 0 };
 	ofstream pcdfile;//有默认构造函数
@@ -214,10 +260,12 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 		if (WaitForSingleObject(m_hGvspExitEvent, 0) == 0)//停止采集，离开线程函数
 		{
 			KSJGIGE_StartGvsp(m_nDeviceCurSel, false);//发送停止采集命令
-			if (imagedata != NULL) delete[] imagedata;//是否采集空间
-			if (idata != NULL) delete[] idata;//是否采集空间
+			if (imagedata != NULL) delete[] imagedata;//释放采集空间
+			if (idata != NULL) delete[] idata;//释放采集空间
 			imagedata = NULL;
 			idata = NULL;
+			if (profiley != NULL) delete[] profiley;
+			profiley = NULL;
 			break;
 		}
 
@@ -226,10 +274,13 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 		{
 			if (nType == 0)//gray
 			{
-				m_SnapStatic.LoadImage((BYTE*)imagedata, nWidth, nHeight, 8);//在控件上显示
+				m_pWndImage->SetImageInfo(nWidth, nHeight, 8);
+				m_pWndImage->LoadImage((BYTE*)imagedata, nWidth, nHeight, 8);
+				//m_SnapStatic.LoadImage((BYTE*)imagedata, nWidth, nHeight, 8);//在控件上显示
 			}
 			else if (nType == 1)//profile
 			{
+				m_pWndImage->SetImageInfo(nWidth, 256, 8);
 				profile = (float*)imagedata;//从数据中获取z坐标
 				profilex = (float*)(imagedata)+nWidth;// *4);//从数据中获取x坐标
 				Mat matDisplay = Mat::zeros(Size(nWidth, 256), CV_8UC1);//新建图片
@@ -245,17 +296,19 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 					}
 				}
 				ImageOutput = matDisplay;
-				m_SnapStatic.LoadImage(ImageOutput.data, nWidth, 256, 8);//在控件上显示
+				m_pWndImage->LoadImage(ImageOutput.data, nWidth, 256, 8);
+				//m_SnapStatic.LoadImage(ImageOutput.data, nWidth, 256, 8);//在控件上显示
 			}
 			else if (nType == 2)//3d
 			{
+				m_pWndImage->SetImageInfo(nWidth, nHeight, 8);
 				profile = (float*)imagedata;//从数据中获取z坐标
 				profilex = (float*)(imagedata)+ nCount;// *4);//从数据中获取x坐标
 
 				Index = 0;
-				for (int i = 0; i < nHeight; ++i)
+				for (i = 0; i < nHeight; ++i)
 				{
-					for (int j = 0; j < nWidth; ++j)
+					for (j = 0; j < nWidth; ++j)
 					{
 						if (profile[Index] <= fZmapHigh && profile[Index] >= fZmapLow)
 						{
@@ -270,11 +323,28 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 					}
 				}
 
-				m_SnapStatic.LoadImage((BYTE*)idata, nWidth, nHeight, 8);//在控件上显示
+				m_pWndImage->LoadImage((BYTE*)idata, nWidth, nHeight, 8);
+				//m_SnapStatic.LoadImage((BYTE*)idata, nWidth, nHeight, 8);//在控件上显示
 				BOOL bCheck = ((CButton*)GetDlgItem(IDC_CHECK_SAVE))->GetCheck();
 				if (bCheck)
 				{
-					pcdfile.open("test.pcd", ios::binary);//保存一帧3d数据到pcd文件内
+					SYSTEMTIME LocalTime;
+					char szFileName[128] = { 0 };
+					GetLocalTime(&LocalTime);
+#ifdef halcon12
+					for (i = 0; i < nCount; i++) profiley[i] = fProfiley * (i / 1280);
+
+					HObject Hobjx, Hobjy, Hobjz;
+					gen_image1(&Hobjx, "real", nWidth, nHeight, (long)profilex);//深拷贝
+					gen_image1(&Hobjy, "real", nWidth, nHeight, (long)profiley);
+					gen_image1(&Hobjz, "real", nWidth, nHeight, (long)profile);
+					HTuple hv_ObjectModel3D;
+					XyzToObjectModel3d(Hobjx, Hobjy, Hobjz, &hv_ObjectModel3D);
+					sprintf_s(szFileName, "capture-%04d-%02d-%02d-%02d-%02d-%02d.om3", LocalTime.wYear, LocalTime.wMonth, LocalTime.wDay, LocalTime.wHour, LocalTime.wMinute, LocalTime.wSecond);
+					WriteObjectModel3d(hv_ObjectModel3D, "om3", szFileName, "invert_normals", "false");
+#else
+					sprintf_s(szFileName, "capture-%04d-%02d-%02d-%02d-%02d-%02d.pcd", LocalTime.wYear, LocalTime.wMonth, LocalTime.wDay, LocalTime.wHour, LocalTime.wMinute, LocalTime.wSecond);
+					pcdfile.open(szFileName, ios::binary);//保存一帧3d数据到pcd文件内
 					char temp[64] = "# .PCD v0.7 - Point Cloud Data file format";
 					pcdfile.write(temp, strlen(temp));
 					pcdfile.write("\n", 1);
@@ -318,8 +388,22 @@ void CKSJGigeVision3D_DemoDlg::GvspThreadX()
 					}
 
 					pcdfile.close();
+#endif
+					
 				}
 			}
 		}
+	}
+}
+
+void CKSJGigeVision3D_DemoDlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	BOOL bCheck = ((CButton*)GetDlgItem(IDC_CHECK_PREVIEWSTART))->GetCheck();
+	if (bCheck)
+	{
+		((CButton*)GetDlgItem(IDC_CHECK_PREVIEWSTART))->SetCheck(FALSE);
+		OnBnClickedCheckPreviewstart();
 	}
 }

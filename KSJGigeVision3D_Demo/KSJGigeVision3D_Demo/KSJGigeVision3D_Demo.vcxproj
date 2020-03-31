@@ -46,11 +46,13 @@
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);../../../101/git.opencv310/opencv.inc</LibraryPath>
     <TargetName>$(ProjectName)d</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>$(HALCONROOT)\include\halconcpp;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);../../../101/git.opencv310/opencv.inc</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>$(HALCONROOT)\include\halconcpp;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -59,11 +61,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\opencv.inc\opencv2;..\opencv.inc\opencv;..\opencv.inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\opencv.inc\opencv2;..\opencv.inc\opencv;..\opencv.inc;$(HALCONROOT)\include;HALCONROOT\include\halconcpp</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(HALCONROOT)\lib\x86sse2-win32</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -88,13 +91,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\opencv.inc\opencv2;..\opencv.inc\opencv;..\opencv.inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\opencv.inc\opencv2;..\opencv.inc\opencv;..\opencv.inc;$(HALCONROOT)\include;HALCONROOT\include\halconcpp</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(HALCONROOT)\lib\x86sse2-win32</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -117,6 +121,7 @@
     <ClInclude Include="KSJGIGEAPI.h" />
     <ClInclude Include="KSJGigeVision3D_Demo.h" />
     <ClInclude Include="KSJGigeVision3D_DemoDlg.h" />
+    <ClInclude Include="KSJImageWnd.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SnapStatic.h" />
     <ClInclude Include="stdafx.h" />
@@ -126,6 +131,7 @@
     <ClCompile Include="KSJGIGEAPI.cpp" />
     <ClCompile Include="KSJGigeVision3D_Demo.cpp" />
     <ClCompile Include="KSJGigeVision3D_DemoDlg.cpp" />
+    <ClCompile Include="KSJImageWnd.cpp" />
     <ClCompile Include="SnapStatic.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

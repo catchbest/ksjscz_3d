@@ -34,16 +34,14 @@
 #include <afxcontrolbars.h>     // 功能区和控件条的 MFC 支持
 
 
-
+#include "../../KSJImageZoomMode.Inc/KSJImageZoomMode.h"
+#pragma comment( lib, "..\\KSJImageZoomMode.Lib\\win32\\MT_KSJImageZoomMode_x86.Lib")
 typedef unsigned (WINAPI *PBEGINTHREADEX_FUNC)(LPVOID lpParam);
 typedef unsigned *PBEGINTHREADEX_ID;
 #include "..\\KSJGigeVisionApi.Inc\\KSJ_GIGEVISION.h"
 #include "..\\KSJGigeVisionApi.Inc\\KSJGigeVisionApi.h"
-#ifdef _DEBUG
-#pragma comment( lib, "..\\KSJGigeVisionApi.lib\\win32\\MDd_KSJGigeVisionApi_x86.lib" )
-#else
 #pragma comment( lib, "..\\KSJGigeVisionApi.lib\\win32\\MD_KSJGigeVisionApi_x86.lib" )
-#endif
+
 
 
 

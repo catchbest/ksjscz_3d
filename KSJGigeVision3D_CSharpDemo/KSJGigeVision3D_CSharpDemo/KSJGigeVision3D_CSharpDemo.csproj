@@ -34,6 +34,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="halcondotnet">
+      <HintPath>C:\Program Files\MVTec\HALCON-12.0\bin\dotnet35\halcondotnet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />

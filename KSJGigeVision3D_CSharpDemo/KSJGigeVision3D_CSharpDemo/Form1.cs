@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define halcon12//有这个定义时加载halcon，屏蔽掉则不加载，保存pcd文件
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -11,15 +12,20 @@ using KSJGigeVisionApi_Space;
 using System.Threading;
 using System.IO;
 using System.Drawing.Imaging;
+using HalconDotNet;
+using System.Runtime.InteropServices;
 
 namespace KSJGigeVision3D_CSharpDemo
 {
-    public struct Mystr
-    {
-        public uint i;
-    };
     public partial class Form1 : Form
     {
+        Point m_ptCanvas;           //画布原点在设备上的坐标
+        Point m_ptCanvasBuf;        //重置画布坐标计算时用的临时变量
+        Point m_ptBmp;              //图像位于画布坐标系中的坐标
+        float m_nScale = 1.0F;      //缩放比例
+        Point m_ptMouseDown;        //鼠标点下是在设备坐标上的坐标
+        Bitmap bitmap;//预览位图
+        bool init = false;
         int[,] CamareIndex = new int[64, 2];
         int m_nDeviceCurSel;
         public Form1()
@@ -49,9 +55,10 @@ namespace KSJGigeVision3D_CSharpDemo
                 comboBox_DEVICE_LIST.Items.Insert(i, szText);
             }
 
-            m_nDeviceCurSel = -1;
+            m_nDeviceCurSel = 0;
+            comboBox_DEVICE_LIST.SelectedIndex = m_nDeviceCurSel;
             exitEvent = new AutoResetEvent(false);
-            
+            this.PictureBox_PREVIEWWND.MouseWheel += new MouseEventHandler(PictureBox_PREVIEWWND_MouseWheel);//控件滚轮事件
         }
 
 
@@ -69,6 +76,9 @@ namespace KSJGigeVision3D_CSharpDemo
             CSnumericUpDown.Value = nColSize;
             RSnumericUpDown.Value = nRowSize;
             TYPEnumericUpDown.Value = nType;
+            YnumericUpDown.Value = 0.1M;
+            LownumericUpDown.Value = 0M;
+            HighnumericUpDown.Value = 20M;
         }
 
         private void comboBox_DEVICE_LIST_SelectedIndexChanged(object sender, EventArgs e)
@@ -177,15 +187,17 @@ namespace KSJGigeVision3D_CSharpDemo
             int nCount = 0;
             float[] profile;
             float[] profilex;
+            float[] profiley;
             profile = new float[nColSize * nRowSize];
             profilex = new float[nColSize * nRowSize];
+            profiley = new float[nColSize * nRowSize];
             Graphics g;
             int i = 0;
             Point p1 = new Point(0, 0);
             Point p2 = new Point(0, 0);
             int Index = 0;
             byte[] idata = new byte[nColSize * nRowSize];
-            Bitmap bitmap;
+            //Bitmap bitmap;
            
             while (true)
             {
@@ -201,7 +213,29 @@ namespace KSJGigeVision3D_CSharpDemo
                     if (nType == 0)//gray
                     {
                         bitmap = ToGrayBitmap(pImageData, nWidth, nHeight);
-                        this.PictureBox_PREVIEWWND.Image = bitmap;
+                        if (!init)//未进行过宽高比例计算
+                        {
+                            float proportion = (float)PictureBox_PREVIEWWND.Width / (float)PictureBox_PREVIEWWND.Height;
+                            float proportion_bmp = (float)nWidth / (float)nHeight;
+                            if (proportion < proportion_bmp)//比较控件和图片宽高比，根据不同情况设置位图在控件内初始显示位置
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Width / (float)nWidth;
+                                float h = nHeight * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Height - (int)h) / 2;
+                                m_ptBmp = new Point(0, (int)(offset / m_nScale));
+                            }
+                            else
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Height / (float)nHeight;
+                                float w = nWidth * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Width - (int)w) / 2;
+                                m_ptBmp = new Point((int)(offset / m_nScale), 0);
+                            }
+                            init = true;//进行设置后标记
+                        }
+                        PictureBox_PREVIEWWND.Invalidate();
                     }
                     else if (nType == 1)//profile
                     {
@@ -222,7 +256,30 @@ namespace KSJGigeVision3D_CSharpDemo
                             }
                         }
 
-                        this.PictureBox_PREVIEWWND.Image = bitmap;
+                        if (!init)//未进行过宽高比例计算
+                        {
+                            float proportion = (float)PictureBox_PREVIEWWND.Width / (float)PictureBox_PREVIEWWND.Height;
+                            float proportion_bmp = (float)nWidth / (float)nHeight;
+                            if (proportion < proportion_bmp)//比较控件和图片宽高比，根据不同情况设置位图在控件内初始显示位置
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Width / (float)nWidth;
+                                float h = nHeight * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Height - (int)h) / 2;
+                                m_ptBmp = new Point(0, (int)(offset / m_nScale));
+                            }
+                            else
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Height / (float)nHeight;
+                                float w = nWidth * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Width - (int)w) / 2;
+                                m_ptBmp = new Point((int)(offset / m_nScale), 0);
+                            }
+                            init = true;//进行设置后标记
+                        }
+                        PictureBox_PREVIEWWND.Invalidate();
+                        //this.PictureBox_PREVIEWWND.Image = bitmap;
                         g.Dispose();
                     }
                     else if (nType == 2)//3d
@@ -250,11 +307,58 @@ namespace KSJGigeVision3D_CSharpDemo
                         }
 
                         bitmap = ToGrayBitmap(idata, nWidth, nHeight);
-                        this.PictureBox_PREVIEWWND.Image = bitmap;
-
+                        //this.PictureBox_PREVIEWWND.Image = bitmap;
+                        if (!init)//未进行过宽高比例计算
+                        {
+                            float proportion = (float)PictureBox_PREVIEWWND.Width / (float)PictureBox_PREVIEWWND.Height;
+                            float proportion_bmp = (float)nWidth / (float)nHeight;
+                            if (proportion < proportion_bmp)//比较控件和图片宽高比，根据不同情况设置位图在控件内初始显示位置
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Width / (float)nWidth;
+                                float h = nHeight * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Height - (int)h) / 2;
+                                m_ptBmp = new Point(0, (int)(offset / m_nScale));
+                            }
+                            else
+                            {
+                                m_nScale = (float)PictureBox_PREVIEWWND.Height / (float)nHeight;
+                                float w = nWidth * m_nScale;
+                                m_ptCanvas = new Point(0, 0);
+                                int offset = (PictureBox_PREVIEWWND.Width - (int)w) / 2;
+                                m_ptBmp = new Point((int)(offset / m_nScale), 0);
+                            }
+                            init = true;//进行设置后标记
+                        }
+                        PictureBox_PREVIEWWND.Invalidate();
                         bool bCheck = SavecheckBox.Checked;
                         if (bCheck)
                         {
+#if halcon12//使用halcon保存om3文件
+                            string t1, filename;
+                            t1 = DateTime.Now.ToString("yyyy-MM-dd");
+                            System.Diagnostics.Debug.WriteLine("开始保存");
+                            filename = t1 + "-" + DateTime.Now.Hour.ToString() + DateTime.Now.Minute.ToString() + DateTime.Now.Second.ToString() + ".om3";
+                            HObject Hobjx = null, Hobjy = null, Hobjz = null;
+                            IntPtr ptrx = Marshal.AllocHGlobal(nCount*4);
+                            Marshal.Copy(profilex, 0, ptrx, nCount);
+                            IntPtr ptrz = Marshal.AllocHGlobal(nCount * 4);
+                            Marshal.Copy(profile, 0, ptrz, nCount);
+                            for (i = 0; i < nCount; i++)
+                            {
+                                profiley[i] = (float)fProfiley * (i / 1280);
+                            }
+
+                            IntPtr ptry = Marshal.AllocHGlobal(nCount * 4);
+                            Marshal.Copy(profiley, 0, ptrz, nCount);
+                            HOperatorSet.GenImage1(out Hobjx, "real", nWidth, nHeight, ptrx);
+                            HOperatorSet.GenImage1(out Hobjy, "real", nWidth, nHeight, ptry);
+                            HOperatorSet.GenImage1(out Hobjz, "real", nWidth, nHeight, ptrz);
+                            HTuple hv_ObjectModel3D;
+                            HOperatorSet.XyzToObjectModel3d(Hobjx, Hobjy, Hobjz, out hv_ObjectModel3D);
+                            HOperatorSet.WriteObjectModel3d(hv_ObjectModel3D, "om3", filename, "invert_normals", "false");
+                            System.Diagnostics.Debug.WriteLine("保存完毕");
+#else//不使用halcon保存pcd文件
                             FileStream fs = new FileStream("test.pcd", FileMode.Create);
                             string temp = "# .PCD v0.7 - Point Cloud Data file format\n";
                             byte[] data = System.Text.Encoding.Default.GetBytes(temp);
@@ -309,6 +413,7 @@ namespace KSJGigeVision3D_CSharpDemo
                             //清空缓冲区、关闭流
                             fs.Flush();
                             fs.Close();
+#endif
                         }
                     }
                 }
@@ -319,6 +424,12 @@ namespace KSJGigeVision3D_CSharpDemo
         {
             try
             {
+                bool bCheck = PreviewcheckBox.Checked;
+                if (bCheck)
+                {
+                    PreviewcheckBox.Checked = false; 
+                }
+
                 KSJGigeVisionApi.KSJGIGEVISION_UnInit();
             }
             catch (Exception ex)
@@ -328,6 +439,58 @@ namespace KSJGigeVision3D_CSharpDemo
 
 
             Application.Exit();
+        }
+
+        private void PictureBox_PREVIEWWND_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {      //如果左键点下    初始化计算要用的临时数据
+                m_ptMouseDown = e.Location;
+                m_ptCanvasBuf = m_ptCanvas;
+            }
+            PictureBox_PREVIEWWND.Focus();
+        }
+
+        private void PictureBox_PREVIEWWND_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (m_nScale <= 0.3 && e.Delta <= 0) return;        //缩小下线
+            if (m_nScale >= 4.9 && e.Delta >= 0) return;        //放大上线
+            //获取 当前点到画布坐标原点的距离
+            SizeF szSub = (Size)m_ptCanvas - (Size)e.Location;
+            //当前的距离差除以缩放比还原到未缩放长度
+            float tempX = szSub.Width / m_nScale;           //这里
+            float tempY = szSub.Height / m_nScale;          //将画布比例
+            //还原上一次的偏移                               //按照当前缩放比还原到
+            m_ptCanvas.X -= (int)(szSub.Width - tempX);     //没有缩放
+            m_ptCanvas.Y -= (int)(szSub.Height - tempY);    //的状态
+            //重置距离差为  未缩放状态                       
+            szSub.Width = tempX;
+            szSub.Height = tempY;
+            m_nScale += e.Delta > 0 ? 0.2F : -0.2F;
+            //重新计算 缩放并 重置画布原点坐标
+            m_ptCanvas.X += (int)(szSub.Width * m_nScale - szSub.Width);
+            m_ptCanvas.Y += (int)(szSub.Height * m_nScale - szSub.Height);
+            PictureBox_PREVIEWWND.Invalidate();
+        }
+
+        private void PictureBox_PREVIEWWND_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {      //移动过程中 左键点下 重置画布坐标系
+                m_ptCanvas = (Point)((Size)m_ptCanvasBuf + ((Size)e.Location - (Size)m_ptMouseDown));
+                PictureBox_PREVIEWWND.Invalidate();
+            }
+        }
+
+        private void PictureBox_PREVIEWWND_Paint(object sender, PaintEventArgs e)
+        {
+            if (init)
+            {
+                Graphics g = e.Graphics;
+                g.TranslateTransform(m_ptCanvas.X, m_ptCanvas.Y);       //设置坐标偏移
+                g.ScaleTransform(m_nScale, m_nScale);                   //设置缩放比
+                g.DrawImage(bitmap, m_ptBmp);
+            }
         }
 
     }
